@@ -335,6 +335,29 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
 .img-search-bar input:focus{border-color:var(--ac)}
 .img-search-bar select{background:var(--sf);border:1px solid var(--bd);border-radius:var(--rs);padding:10px;color:var(--tx);font-size:13px;-webkit-appearance:none}
 .img-search-bar button{background:var(--ac);color:#fff;border:none;border-radius:var(--rs);padding:10px 16px;font-size:14px;cursor:pointer;white-space:nowrap}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:50;background:var(--sf);border-top:1px solid var(--bd);display:flex;align-items:center;padding-bottom:var(--sab);height:calc(58px + var(--sab))}
+.bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 4px;background:none;border:none;cursor:pointer;color:var(--t3);transition:color .15s}
+.bnav-btn.active{color:var(--ac)}
+.bnav-btn:active{opacity:.7}
+.bnav-icon{font-size:18px;line-height:1}
+.bnav-lbl{font-size:10px;font-weight:500;letter-spacing:.01em}
+.bnav-add{flex:none;width:52px;height:52px;background:var(--ac);border-radius:50% !important;color:#fff !important;margin:0 8px;margin-bottom:4px;box-shadow:0 2px 12px rgba(127,119,221,.45)}
+.bnav-add:active{transform:scale(.93)}
+/* push content above bottom nav */
+.main{padding-bottom:calc(5rem + var(--sab)) !important}
+
+/* MORE MENU panel */
+.more-panel{position:fixed;bottom:calc(58px + var(--sab));left:0;right:0;background:var(--sf);border-top:1px solid var(--bd);border-radius:20px 20px 0 0;z-index:49;padding:1rem;display:none;box-shadow:0 -4px 24px rgba(0,0,0,.12)}
+.more-panel.open{display:block}
+.more-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.more-item{display:flex;flex-direction:column;align-items:center;gap:5px;padding:.75rem .5rem;background:var(--s2);border-radius:var(--r);cursor:pointer;border:1px solid var(--bd)}
+.more-item:active{background:var(--bd)}
+.more-item-icon{font-size:22px}
+.more-item-lbl{font-size:11px;color:var(--t2);text-align:center;font-weight:500}
+.more-overlay{position:fixed;inset:0;z-index:48;display:none}
+.more-overlay.open{display:block}
 </style>
 </head>
 <body>
@@ -376,12 +399,11 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
       <option value="titre">A&#8594;Z</option>
       <option value="retard">Retard</option>
     </select>
-    <button class="add-btn" onclick="openAdd()">+ Ajouter</button>
     <div style="display:flex;gap:5px">
       <button class="vbtn active" id="btn-grid" onclick="setViewMode('grid')" title="Grille">&#9783;</button>
       <button class="vbtn" id="btn-list" onclick="setViewMode('list')" title="Liste">&#9776;</button>
+      <button class="vbtn" onclick="markAllRead()" title="Tout marquer comme lu">&#10003;&#10003;</button>
     </div>
-    <button class="vbtn" onclick="markAllRead()" title="Tout marquer comme lu" style="white-space:nowrap">&#10003;&#10003; Tout lu</button>
   </div>
   <div class="sec-lbl">Ma bibliothèque</div>
   <div id="grid" class="grid"></div>
@@ -411,7 +433,7 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
       <div class="img-tabs">
         <button class="img-tab active" id="tab-file" onclick="switchImgTab('file')">Fichier</button>
         <button class="img-tab" id="tab-url" onclick="switchImgTab('url')">Lien URL</button>
-        <button class="img-tab" onclick="openImgSearch(function(url){switchImgTab('url');document.getElementById('m-img-url').value=url;previewImgUrl(url);})" style="background:var(--ok);color:var(--ot);border-color:#639922">&#128269; TMDB/RAWG</button>
+        <button class="img-tab" id="tab-search" onclick="openImgSearch(function(url){switchImgTab('url');document.getElementById('m-img-url').value=url;previewImgUrl(url);})" style="background:var(--ac);color:#fff;border-color:var(--ac);font-weight:600">&#128269; Chercher</button>
       </div>
       <div id="img-file-zone">
         <div class="img-box" onclick="document.getElementById('m-img-file').click()">
@@ -1268,12 +1290,12 @@ function setViewMode(m){
 
 /* ------ MARK ALL READ ------ */
 function markAllRead(){
-  var readable = data.filter(function(d){ return (d.type==='Manga'||d.type==='Webtoon'||d.type==='Light Novel') && d.chapoDispo && d.chap < d.chapoDispo; });
-  if(!readable.length){ alert('Aucun titre avec des chapitres non lus.'); return; }
+  var readable = data.filter(function(d){ return (d.type==='Manga'||d.type==='Webtoon'||d.type==='Light Novel') && d.chapoDispo && parseInt(d.chap) < parseInt(d.chapoDispo); });
+  if(!readable.length){ alert('Aucun titre en retard !'); return; }
   if(!confirm('Marquer '+readable.length+' titre(s) comme entièrement lus ?')) return;
   readable.forEach(function(d){
     hist.unshift({titre:d.titre, detail:'Fini chap. '+d.chapoDispo, date:Date.now()});
-    d.chap = d.chapoDispo;
+    d.chap = parseInt(d.chapoDispo);
   });
   if(hist.length>40) hist=hist.slice(0,40);
   save(); render();
@@ -1627,6 +1649,47 @@ function shareCard(id){
 }
 
 
+
+function showTab(tab){
+  // Reset all nav buttons
+  ['home','rank','stats','more'].forEach(function(t){
+    var b=document.getElementById('bnav-'+t);
+    if(b) b.classList.remove('active');
+  });
+  closeMore();
+  if(tab==='home'){
+    var b=document.getElementById('bnav-home');if(b)b.classList.add('active');
+  } else if(tab==='rank'){
+    var b=document.getElementById('bnav-rank');if(b)b.classList.add('active');
+    openPage('pg-rank');
+  } else if(tab==='stats'){
+    var b=document.getElementById('bnav-stats');if(b)b.classList.add('active');
+    openPage('pg-stats');
+  } else if(tab==='more'){
+    var b=document.getElementById('bnav-more');if(b)b.classList.add('active');
+    openMore();
+  }
+}
+function openMore(){
+  document.getElementById('more-panel').classList.add('open');
+  document.getElementById('more-overlay').classList.add('open');
+}
+function closeMore(){
+  document.getElementById('more-panel').classList.remove('open');
+  document.getElementById('more-overlay').classList.remove('open');
+  var b=document.getElementById('bnav-more');
+  if(b) b.classList.remove('active');
+}
+
+function saveSettingsForm(){
+  settings.tmdb = (document.getElementById('set-tmdb').value||'').trim();
+  settings.rawg = (document.getElementById('set-rawg').value||'').trim();
+  saveSettings();
+  // Visual feedback
+  var btn = document.querySelector('.settings-save-btn');
+  if(btn){ btn.textContent='✓ Sauvegardé !'; btn.style.background='#27AE60'; setTimeout(function(){ btn.textContent='✓ Enregistrer'; btn.style.background=''; },2000); }
+}
+
 </script>
 
 <!-- IMAGE SEARCH -->
@@ -1699,5 +1762,32 @@ function shareCard(id){
   </div>
 </div>
 
+
+<!-- MORE OVERLAY -->
+<div class="more-overlay" id="more-overlay" onclick="closeMore()"></div>
+<div class="more-panel" id="more-panel">
+  <div class="more-grid">
+    <div class="more-item" onclick="closeMore();openPage('pg-wish')">
+      <div class="more-item-icon">&#128276;</div>
+      <div class="more-item-lbl">À découvrir</div>
+    </div>
+    <div class="more-item" onclick="closeMore();openPage('pg-cats')">
+      <div class="more-item-icon">&#9632;</div>
+      <div class="more-item-lbl">Catégories</div>
+    </div>
+    <div class="more-item" onclick="closeMore();openPage('pg-hist')">
+      <div class="more-item-icon">&#9776;</div>
+      <div class="more-item-lbl">Activité</div>
+    </div>
+    <div class="more-item" onclick="closeMore();openPage('pg-save')">
+      <div class="more-item-icon">&#128190;</div>
+      <div class="more-item-lbl">Sauvegarde</div>
+    </div>
+    <div class="more-item" onclick="closeMore();openPage('pg-settings')">
+      <div class="more-item-icon">&#9881;</div>
+      <div class="more-item-lbl">Paramètres</div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
