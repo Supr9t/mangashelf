@@ -361,6 +361,16 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
 .more-item-lbl{font-size:11px;color:var(--t2);text-align:center;font-weight:500}
 .more-overlay{position:fixed;inset:0;z-index:48;display:none}
 .more-overlay.open{display:block}
+
+/* OVERFLOW FIXES */
+.type-filter-wrap,.tabs-wrap{max-width:100%;overflow-x:auto}
+.img-search-bar{flex-wrap:wrap}
+.toolbar{overflow-x:visible}
+select{max-width:100%;text-overflow:ellipsis}
+.cfoot{overflow:hidden}
+.fb{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.list-row{overflow:hidden}
+.list-row-right{flex-shrink:0;max-width:55%}
 </style>
 </head>
 <body>
@@ -371,9 +381,9 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
 </div>
 
 <div class="bottom-nav">
-  <button class="bnav-btn active" id="bnav-home" onclick="showTab('home')">
-    <span class="bnav-icon">&#127968;</span>
-    <span class="bnav-lbl">Accueil</span>
+  <button class="bnav-btn" id="bnav-wish" onclick="showTab('wish')">
+    <span class="bnav-icon">&#128276;</span>
+    <span class="bnav-lbl">À voir</span>
   </button>
   <button class="bnav-btn" id="bnav-rank" onclick="showTab('rank')">
     <span class="bnav-icon">&#127942;</span>
@@ -1235,6 +1245,12 @@ function saveEntry(){
   };
   var idx=data.findIndex(function(x){return x.id===id;});
   if(idx>-1)data[idx]=entry;else data.unshift(entry);
+  // Remove from wishlist if started from there
+  if(pendingWishId){
+    wishlist=wishlist.filter(function(x){return x.id!==pendingWishId;});
+    saveWishlist();
+    pendingWishId=null;
+  }
   save();closePage('pg-form');render();
 }
 
@@ -1334,12 +1350,11 @@ function addToWishlist(){
   saveWishlist(); document.getElementById('wish-titre').value=''; document.getElementById('wish-note').value='';
   renderWishlist();
 }
+var pendingWishId = null;
 function startWish(id){
   var w = wishlist.find(function(x){ return x.id===id; });
   if(!w) return;
-  wishlist = wishlist.filter(function(x){ return x.id!==id; });
-  saveWishlist();
-  // Pre-fill form
+  pendingWishId = id; // will be removed from wishlist only when form is saved
   document.getElementById('m-type').value = w.type||'Manga';
   document.getElementById('m-titre').value = w.titre||'';
   document.getElementById('m-avis').value = w.note||'';
@@ -1360,7 +1375,6 @@ function startWish(id){
   resetImgUI(); switchImgTab('file'); buildCriteria(null); populateCatsForm([]);
   document.getElementById('saisons-form').innerHTML='';
   updateFormType();
-  renderWishlist();
   openPage('pg-form');
 }
 function delWish(id){
@@ -1519,7 +1533,27 @@ async function doImgSearch(){
 
   try {
     var imgs = [];
-    if(src==='tmdb'){
+    if(src==='jikan'){
+      var url0 = 'https://api.jikan.moe/v4/manga?q='+encodeURIComponent(q)+'&limit=12';
+      try {
+        var r0 = await fetch(url0);
+        var j0 = await r0.json();
+        if(j0.data) j0.data.forEach(function(item){
+          if(item.images&&item.images.jpg&&item.images.jpg.large_image_url)
+            imgs.push({url:item.images.jpg.large_image_url, label:item.title||''});
+        });
+      } catch(e2){}
+      // Also try anime
+      var url0a = 'https://api.jikan.moe/v4/anime?q='+encodeURIComponent(q)+'&limit=8';
+      try {
+        var r0a = await fetch(url0a);
+        var j0a = await r0a.json();
+        if(j0a.data) j0a.data.forEach(function(item){
+          if(item.images&&item.images.jpg&&item.images.jpg.large_image_url)
+            imgs.push({url:item.images.jpg.large_image_url, label:(item.title||'')});
+        });
+      } catch(e3){}
+    } else if(src==='tmdb'){
       var key = settings.tmdb;
       if(!key){ res.innerHTML='<div style="color:var(--dn);padding:1rem">Clé API TMDB manquante — allez dans ⚙️ Paramètres</div>'; return; }
       var url = 'https://api.themoviedb.org/3/search/multi?api_key='+encodeURIComponent(key)+'&query='+encodeURIComponent(q)+'&language=fr-FR&include_adult=false';
@@ -1572,123 +1606,60 @@ function shareCard(id){
   if(!d) return;
   var ti = getTypeInfo(d.type);
   var nt = noteTotal(d);
-  var img = getImgSrc(d);
-  var sc = {'En cours':'#4A90E2','Fini':'#27AE60','Pause':'#F39C12','Abandon':'#E24B4A'}[d.statut]||'#4A90E2';
-
-  // Polyfill roundRect for older browsers
-  if(!CanvasRenderingContext2D.prototype.roundRect){
-    CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){
-      this.beginPath();this.moveTo(x+r,y);this.lineTo(x+w-r,y);
-      this.quadraticCurveTo(x+w,y,x+w,y+r);this.lineTo(x+w,y+h-r);
-      this.quadraticCurveTo(x+w,y+h,x+w-r,y+h);this.lineTo(x+r,y+h);
-      this.quadraticCurveTo(x,y+h,x,y+h-r);this.lineTo(x,y+r);
-      this.quadraticCurveTo(x,y,x+r,y);this.closePath();return this;
-    };
+  var prog = '';
+  if(d.type==='Manga'||d.type==='Webtoon'||d.type==='Light Novel'){
+    prog = d.chap+(d.chapoDispo?' / '+d.chapoDispo+' chap':' chap lus');
+  } else if(d.type==='Film'){
+    prog = 'Vu '+(d.vues||0)+' fois';
+  } else if(d.type==='Jeu vidéo'){
+    prog = (d.heures||0)+'h jouées'+(d.termines?' · terminé '+d.termines+'x':'');
+  } else if(d.saisons&&d.saisons.length){
+    var tot=d.saisons.reduce(function(a,s){return a+(s.eps||0);},0);
+    var done=d.saisons.reduce(function(a,s){return a+(s.done||0);},0);
+    prog = done+(tot?' / '+tot:'')+' épisodes · '+d.saisons.length+' saison(s)';
   }
-  var canvas = document.createElement('canvas');
-  canvas.width = 600; canvas.height = 340;
-  var ctx = canvas.getContext('2d');
-
-  var draw = function(){
-    // Background gradient
-    var grad = ctx.createLinearGradient(0,0,600,340);
-    grad.addColorStop(0,'#0f0d1a');
-    grad.addColorStop(1,'#1e1a38');
-    ctx.fillStyle = grad;
-    ctx.roundRect(0,0,600,340,16);
-    ctx.fill();
-
-    // Cover image on left
-    if(img){
-      var coverImg = new Image();
-      coverImg.crossOrigin='anonymous';
-      coverImg.onload = function(){
-        ctx.save();
-        ctx.beginPath();
-        ctx.roundRect(24,24,190,292,10);
-        ctx.clip();
-        ctx.drawImage(coverImg,24,24,190,292);
-        ctx.restore();
-        drawText();
-      };
-      coverImg.onerror = drawText;
-      coverImg.src = img;
-    } else {
-      // Placeholder
-      ctx.fillStyle = '#231f35';
-      ctx.beginPath(); ctx.roundRect(24,24,190,292,10); ctx.fill();
-      ctx.fillStyle='#5f5a78'; ctx.font='48px serif';
-      ctx.fillText(ti.e, 78, 180);
-      drawText();
-    }
-  };
-
-  var drawText = function(){
-    var x = 234;
-
-    // Type pill
-    var typeColors2 = {'Manga':'#F5A050','Webtoon':'#50C878','Light Novel':'#9490e8','Anime':'#C080F0','Série':'#F09090','Film':'#80B0F0','Jeu vidéo':'#60A8E0'};
-    ctx.fillStyle = typeColors2[d.type]||'#9490e8';
-    ctx.beginPath(); ctx.roundRect(x,28,100,22,11); ctx.fill();
-    ctx.fillStyle='#fff'; ctx.font='bold 11px system-ui'; ctx.fillText(ti.e+' '+d.type.toUpperCase(),x+10,44);
-
-    // Title
-    ctx.fillStyle='#ede9ff'; ctx.font='bold 22px system-ui';
-    var words=d.titre.split(' '); var line=''; var ty=90;
-    words.forEach(function(w){
-      var test=line+w+' ';
-      if(ctx.measureText(test).width>340&&line){ ctx.fillText(line.trim(),x,ty); ty+=28; line=w+' '; }
-      else line=test;
+  var lines = [];
+  lines.push(ti.e+' '+d.titre);
+  lines.push('━━━━━━━━━━━━━━━━━');
+  lines.push('📌 Type : '+d.type);
+  lines.push('🔖 Statut : '+d.statut);
+  if(nt>0){
+    lines.push('⭐ Note : '+nt+'/20');
+    var critLines = [];
+    CRIT.forEach(function(c){
+      if(d.notes&&d.notes[c.id]>0) critLines.push('  '+c.label+' : '+d.notes[c.id]+'/4');
     });
-    if(line.trim()) ctx.fillText(line.trim(),x,ty);
-
-    // Status badge
-    ctx.fillStyle=sc+'33'; ctx.beginPath(); ctx.roundRect(x,ty+14,90,22,11); ctx.fill();
-    ctx.fillStyle=sc; ctx.font='bold 11px system-ui'; ctx.fillText(d.statut,x+10,ty+29);
-
-    // Note
-    if(nt>0){
-      ty+=52;
-      ctx.fillStyle='#9490e8'; ctx.font='bold 28px system-ui'; ctx.fillText(nt+'/20',x,ty);
-      ctx.fillStyle='#5f5a78'; ctx.font='13px system-ui'; ctx.fillText('★ Note globale',x,ty+18);
-      // Criteria bars
-      if(d.notes){
-        ty+=38;
-        CRIT.forEach(function(c,i){
-          if(d.notes[c.id]===undefined) return;
-          var bx=x; var by=ty+i*22;
-          ctx.fillStyle='#2e2a45'; ctx.beginPath(); ctx.roundRect(bx,by,200,10,5); ctx.fill();
-          ctx.fillStyle='#9490e8'; ctx.beginPath(); ctx.roundRect(bx,by,(d.notes[c.id]/4)*200,10,5); ctx.fill();
-          ctx.fillStyle='#9b96b8'; ctx.font='10px system-ui'; ctx.fillText(c.label,bx+205,by+9);
-        });
-      }
-    }
-
-    // Logo watermark
-    ctx.fillStyle='#3C3489'; ctx.font='bold 13px system-ui';
-    ctx.fillText('mangashelf',470,320);
-
-    // Export
-    var link=document.createElement('a');
-    link.download='mangashelf_'+d.titre.replace(/[^a-z0-9]/gi,'_')+'.png';
-    link.href=canvas.toDataURL('image/png');
-    link.click();
-  };
-
-  draw();
+    if(critLines.length) lines = lines.concat(critLines);
+  }
+  if(prog) lines.push('📖 Progression : '+prog);
+  if(d.relus>0) lines.push('🔁 Relu/Revu : '+d.relus+'x');
+  if(d.platine) lines.push('🏆 Platine PlayStation');
+  if(d.avis){ lines.push('━━━━━━━━━━━━━━━━━'); lines.push('💬 Mon avis :'); lines.push(d.avis); }
+  if(d.url){ lines.push('━━━━━━━━━━━━━━━━━'); lines.push('🔗 Lire : '+d.url); }
+  if(d.urlEn) lines.push('🔗 EN : '+d.urlEn);
+  lines.push('━━━━━━━━━━━━━━━━━');
+  lines.push('via mangashelf');
+  var text = lines.join('\n');
+  // Show share modal
+  document.getElementById('share-text').value = text;
+  document.getElementById('share-modal').style.display = 'flex';
+  // Try native share
+  if(navigator.share){
+    navigator.share({title: d.titre, text: text}).catch(function(){});
+  }
 }
 
 
 
 function showTab(tab){
-  // Reset all nav buttons
-  ['home','rank','stats','more'].forEach(function(t){
+  ['wish','rank','stats','more'].forEach(function(t){
     var b=document.getElementById('bnav-'+t);
     if(b) b.classList.remove('active');
   });
   closeMore();
-  if(tab==='home'){
-    var b=document.getElementById('bnav-home');if(b)b.classList.add('active');
+  if(tab==='wish'){
+    var b=document.getElementById('bnav-wish');if(b)b.classList.add('active');
+    loadWishlist(); renderWishlist(); openPage('pg-wish');
   } else if(tab==='rank'){
     var b=document.getElementById('bnav-rank');if(b)b.classList.add('active');
     openPage('pg-rank');
@@ -1726,13 +1697,19 @@ function saveSettingsForm(){
 <div id="pg-img-search" class="overlay">
   <div class="pg-hdr"><button class="back-btn" onclick="closeImgSearch()">&#8592;</button><h2>Recherche d'image</h2></div>
   <div class="pg-body">
-    <div class="img-search-bar">
-      <input type="text" id="img-search-query" placeholder="Titre à rechercher...">
-      <select id="img-search-src">
-        <option value="tmdb">TMDB (Films/Séries/Anime)</option>
-        <option value="rawg">RAWG (Jeux vidéo)</option>
-      </select>
-      <button onclick="doImgSearch()">&#128269;</button>
+    <div style="margin-bottom:.75rem;background:var(--s2);border-radius:var(--rs);padding:.65rem .85rem;font-size:12px;color:var(--t2)">
+      💡 <strong>Jikan</strong> (manga/anime) = gratuit, sans clé. <strong>TMDB/RAWG</strong> = clé requise dans ⚙️ Paramètres.
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:1rem">
+      <input type="text" id="img-search-query" placeholder="Titre à rechercher..." style="background:var(--sf);border:1px solid var(--bd);border-radius:var(--rs);padding:11px 13px;color:var(--tx);font-size:15px;outline:none;width:100%">
+      <div style="display:flex;gap:8px">
+        <select id="img-search-src" style="flex:1;background:var(--sf);border:1px solid var(--bd);border-radius:var(--rs);padding:10px;color:var(--tx);font-size:13px;-webkit-appearance:none">
+          <option value="jikan">🆓 Jikan — Manga/Anime (gratuit)</option>
+          <option value="tmdb">TMDB — Films/Séries (clé requise)</option>
+          <option value="rawg">RAWG — Jeux vidéo (clé requise)</option>
+        </select>
+        <button onclick="doImgSearch()" style="background:var(--ac);color:#fff;border:none;border-radius:var(--rs);padding:10px 18px;font-size:15px;font-weight:600;cursor:pointer;white-space:nowrap">Chercher</button>
+      </div>
     </div>
     <div id="img-search-results"></div>
   </div>
@@ -1816,6 +1793,18 @@ function saveSettingsForm(){
     <div class="more-item" onclick="closeMore();openPage('pg-settings')">
       <div class="more-item-icon">&#9881;</div>
       <div class="more-item-lbl">Paramètres</div>
+    </div>
+  </div>
+</div>
+
+<!-- SHARE MODAL -->
+<div id="share-modal" style="display:none" class="modal-bg" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal-card">
+    <h3>Partager cette fiche &#128247;</h3>
+    <textarea id="share-text" style="width:100%;min-height:180px;background:var(--s2);border:1px solid var(--bd);border-radius:var(--rs);padding:10px;color:var(--tx);font-size:13px;font-family:monospace;resize:none;outline:none" readonly></textarea>
+    <div class="modal-btns" style="margin-top:.75rem">
+      <button class="btn-cancel" onclick="document.getElementById('share-modal').style.display='none'">Fermer</button>
+      <button class="btn-ok" onclick="navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('share-text').value).then(function(){var b=event.target;b.textContent='✓ Copié !';setTimeout(function(){b.textContent='Copier';},2000);})">Copier</button>
     </div>
   </div>
 </div>
