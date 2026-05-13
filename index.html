@@ -340,15 +340,14 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
 .img-search-bar button{background:var(--ac);color:#fff;border:none;border-radius:var(--rs);padding:10px 16px;font-size:14px;cursor:pointer;white-space:nowrap}
 
 /* BOTTOM NAV */
-.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:50;background:var(--sf);border-top:1px solid var(--bd);display:flex;align-items:center;padding-bottom:var(--sab);height:calc(58px + var(--sab))}
-.bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 4px;background:none;border:none;cursor:pointer;color:var(--t3);transition:color .15s}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:50;background:var(--sf);border-top:1px solid var(--bd);display:flex;align-items:center;justify-content:space-around;padding-bottom:var(--sab);height:calc(56px + var(--sab));padding-left:4px;padding-right:4px}
+.bnav-btn{flex:1;max-width:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px;background:none;border:none;cursor:pointer;color:var(--t3);transition:color .15s;overflow:hidden}
 .bnav-btn.active{color:var(--ac)}
 .bnav-btn:active{opacity:.7}
-.bnav-icon{font-size:18px;line-height:1}
-.bnav-lbl{font-size:10px;font-weight:500;letter-spacing:.01em}
-.bnav-add{flex:none;width:52px;height:52px;background:var(--ac);border-radius:50% !important;color:#fff !important;margin:0 8px;margin-bottom:4px;box-shadow:0 2px 12px rgba(127,119,221,.45)}
+.bnav-icon{font-size:17px;line-height:1;flex-shrink:0}
+.bnav-lbl{font-size:9px;font-weight:500;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.bnav-add{flex:none !important;max-width:none !important;width:46px;height:46px;background:var(--ac);border-radius:50% !important;color:#fff !important;margin:0 6px;margin-bottom:2px;box-shadow:0 2px 12px rgba(127,119,221,.4);padding:0 !important}
 .bnav-add:active{transform:scale(.93)}
-/* push content above bottom nav */
 .main{padding-bottom:calc(5rem + var(--sab)) !important}
 
 /* MORE MENU panel */
@@ -371,6 +370,25 @@ select{max-width:100%;text-overflow:ellipsis}
 .fb{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .list-row{overflow:hidden}
 .list-row-right{flex-shrink:0;max-width:55%}
+
+/* EN COURS PAGE */
+.ec-card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden;margin-bottom:10px}
+.ec-top{display:flex;align-items:center;gap:12px;padding:.9rem 1rem;cursor:pointer}
+.ec-top:active{background:var(--s2)}
+.ec-img{width:52px;height:72px;object-fit:cover;border-radius:6px;flex-shrink:0}
+.ec-img-ph{width:52px;height:72px;background:var(--s2);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.ec-info{flex:1;min-width:0}
+.ec-title{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ec-edit-btn{background:var(--s2);border:1px solid var(--bd);border-radius:var(--rx);width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:14px}
+.ec-inputs{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:.5rem 1rem .75rem}
+.ec-inp-group label{display:block;font-size:11px;color:var(--t3);margin-bottom:3px}
+.ec-inp-group input{width:100%;background:var(--s2);border:1px solid var(--bd);border-radius:var(--rx);padding:8px 10px;color:var(--tx);font-size:14px;outline:none}
+.ec-inp-group input:focus{border-color:var(--ac)}
+.ec-read-btn{display:block;padding:.65rem 1rem;border-top:1px solid var(--bd);font-size:13px;font-weight:600;color:var(--at);text-decoration:none;background:var(--ab)}
+.ec-read-btn:active{opacity:.75}
+.ec-read-en{color:var(--ot);background:var(--ok)}
+
+.ec-section-title{font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.6rem;padding:.25rem 0}
 </style>
 </head>
 <body>
@@ -381,9 +399,9 @@ select{max-width:100%;text-overflow:ellipsis}
 </div>
 
 <div class="bottom-nav">
-  <button class="bnav-btn" id="bnav-wish" onclick="showTab('wish')">
-    <span class="bnav-icon">&#128276;</span>
-    <span class="bnav-lbl">À voir</span>
+  <button class="bnav-btn" id="bnav-encours" onclick="showTab('encours')">
+    <span class="bnav-icon">&#9654;</span>
+    <span class="bnav-lbl">En cours</span>
   </button>
   <button class="bnav-btn" id="bnav-rank" onclick="showTab('rank')">
     <span class="bnav-icon">&#127942;</span>
@@ -417,12 +435,12 @@ select{max-width:100%;text-overflow:ellipsis}
   <div class="tabs-wrap"><div class="tabs" id="cat-tabs"></div></div>
 
   <div class="toolbar">
-    <input type="text" id="search" placeholder="Rechercher..." oninput="renderGrid()">
-    <select id="fStatus" onchange="renderGrid()">
+    <input type="text" id="search" placeholder="Rechercher..." oninput="render()">
+    <select id="fStatus" onchange="render()">
       <option value="">Tous statuts</option>
       <option>En cours</option><option>Fini</option><option>Pause</option><option>Abandon</option>
     </select>
-    <select id="fSort" onchange="renderGrid()">
+    <select id="fSort" onchange="render()">
       <option value="date">Récent</option>
       <option value="note-desc">Note &#9660;</option>
       <option value="note-asc">Note &#9650;</option>
@@ -432,7 +450,6 @@ select{max-width:100%;text-overflow:ellipsis}
     <div style="display:flex;gap:5px">
       <button class="vbtn active" id="btn-grid" onclick="setViewMode('grid')" title="Grille">&#9783;</button>
       <button class="vbtn" id="btn-list" onclick="setViewMode('list')" title="Liste">&#9776;</button>
-      <button class="vbtn" onclick="markAllRead()" title="Tout marquer comme lu">&#10003;&#10003;</button>
     </div>
   </div>
   <div class="sec-lbl">Ma bibliothèque</div>
@@ -555,11 +572,7 @@ select{max-width:100%;text-overflow:ellipsis}
       </div>
     </div>
 
-    <!-- Relectures -->
-    <div class="form-row" id="z-relus">
-      <label>Relectures <span style="font-weight:400;color:var(--t3);font-size:11px">(en plus de la 1ère fois)</span></label>
-      <input type="number" id="m-relus" min="0" value="0" inputmode="numeric">
-    </div>
+
 
     <!-- Cats -->
     <div class="form-row">
@@ -688,6 +701,7 @@ function openPage(id){
   if(id==='pg-cats') renderCats();
   if(id==='pg-rank') renderRank();
   if(id==='pg-stats'){ renderStats2(); }
+  if(id==='pg-encours'){ renderEnCours(); }
   if(id==='pg-wish'){ loadWishlist(); renderWishlist(); }
   if(id==='pg-settings'){ document.getElementById('set-tmdb').value=settings.tmdb||''; document.getElementById('set-rawg').value=settings.rawg||''; }
 }
@@ -703,7 +717,7 @@ function fmtDate(ts){
 function getTypeInfo(v){for(var i=0;i<TYPES.length;i++)if(TYPES[i].v===v)return TYPES[i];return TYPES[0];}
 function getDCats(d){return Array.isArray(d.cats)?d.cats:(d.cat?[d.cat]:[]);}
 function getImgSrc(d){return d.imgUrl||d.imgData||null;}
-function noteTotal(d){if(!d.notes)return 0;return CRIT.reduce(function(a,c){return a+(d.notes[c.id]||0);},0);}
+function noteTotal(d){if(!d.notes)return 0;var t=CRIT.reduce(function(a,c){return a+(parseFloat(d.notes[c.id])||0);},0);return Math.round(t*100)/100;}
 function isReadable(t){return t==='Manga'||t==='Webtoon'||t==='Light Novel';}
 function isWatchable(t){return t==='Anime'||t==='Série'||t==='Film';}
 function hasSaisons(t){return t==='Anime'||t==='Série';}
@@ -714,14 +728,32 @@ function stClass(s){return{' En cours':'se','Fini':'sf2','Pause':'sp','Abandon':
 function render(){renderStats();renderNotif();renderTypeFilter();renderCatTabs();renderGrid();}
 
 function renderStats(){
-  var total=data.length,ec=data.filter(function(d){return d.statut==='En cours';}).length;
-  var nw=data.filter(function(d){return hasNew(d);}).length;
-  var ch=data.filter(function(d){return isReadable(d.type);}).reduce(function(a,d){return a+d.chap;},0);
+  var filtered=data.filter(function(d){
+    if(activeTypes.length && !activeTypes.includes(d.type)) return false;
+    if(activeCat && !getDCats(d).includes(activeCat)) return false;
+    return true;
+  });
+  var total=filtered.length;
+  var ec=filtered.filter(function(d){return d.statut==='En cours';}).length;
+  var nw=filtered.filter(function(d){return hasNew(d);}).length;
+  var stat4lbl, stat4val;
+  if(activeTypes.length===1 && activeTypes[0]==='Jeu vidéo'){
+    stat4lbl='🎮 Heures'; stat4val=filtered.reduce(function(a,d){return a+(d.heures||0);},0);
+  } else if(activeTypes.length===1 && activeTypes[0]==='Film'){
+    stat4lbl='🎬 Vus'; stat4val=filtered.reduce(function(a,d){return a+(d.vues||0);},0);
+  } else if(activeTypes.length && activeTypes.every(function(t){return t==='Anime'||t==='Série';})){
+    stat4lbl='📺 Épisodes'; stat4val=filtered.reduce(function(a,d){
+      if(d.saisons) return a+d.saisons.reduce(function(b,s){return b+(s.done||0);},0);
+      return a;
+    },0);
+  } else {
+    stat4lbl='📖 Chap. lus'; stat4val=filtered.filter(function(d){return isReadable(d.type);}).reduce(function(a,d){return a+d.chap;},0);
+  }
   document.getElementById('stats').innerHTML=
     '<div class="stat"><div class="stat-l">Total</div><div class="stat-v a">'+total+'</div></div>'+
     '<div class="stat"><div class="stat-l">En cours</div><div class="stat-v">'+ec+'</div></div>'+
     '<div class="stat"><div class="stat-l">Nouveautés</div><div class="stat-v '+(nw?'w':'')+'">'+nw+'</div></div>'+
-    '<div class="stat"><div class="stat-l">Chap. lus</div><div class="stat-v">'+ch+'</div></div>';
+    '<div class="stat"><div class="stat-l">'+stat4lbl+'</div><div class="stat-v">'+stat4val+'</div></div>';
 }
 function renderNotif(){
   var n=data.filter(function(d){return hasNew(d);});
@@ -739,7 +771,7 @@ function renderTypeFilter(){
 function toggleType(v){
   var idx=activeTypes.indexOf(v);
   if(idx>-1) activeTypes.splice(idx,1); else activeTypes.push(v);
-  renderTypeFilter(); renderGrid();
+  render();
 }
 function renderCatTabs(){
   var el=document.getElementById('cat-tabs');
@@ -748,7 +780,7 @@ function renderCatTabs(){
     return '<button class="tab'+(activeCat===t.v?' active':'')+'" onclick="setCat(\''+esc(t.v)+'\')">'+esc(t.l)+'</button>';
   }).join('');
 }
-function setCat(v){activeCat=v;renderCatTabs();renderGrid();}
+function setCat(v){activeCat=v;render();}
 
 function getRank(id,typeFilter){
   var pool=typeFilter?data.filter(function(d){return d.type===typeFilter;}):data;
@@ -1104,7 +1136,7 @@ function buildCriteria(notes){
     return '<div class="crit-item">'+
       '<div class="crit-top"><div><div class="crit-name">'+c.label+'</div><div class="crit-desc">'+c.desc+'</div></div>'+
       '<div class="crit-val" id="cv-'+c.id+'">'+v+'</div></div>'+
-      '<input class="crit-slider" type="range" min="0" max="4" step="1" value="'+v+'" id="cs-'+c.id+'" oninput="updateCrit(\''+c.id+'\',this.value)">'+
+      '<input class="crit-slider" type="range" min="0" max="4" step="0.25" value="'+v+'" id="cs-'+c.id+'" oninput="updateCrit(\''+c.id+'\',this.value)">'+
     '</div>';
   }).join('');calcTotal();
 }
@@ -1169,7 +1201,7 @@ function openAdd(){
   document.getElementById('m-vues').value='0';
   document.getElementById('m-heures').value='0';
   document.getElementById('m-termines').value='0';
-  document.getElementById('m-relus').value='0';
+
   document.getElementById('m-platine').checked=false;
   document.getElementById('m-desc').value='';
   document.getElementById('m-avis').value='';
@@ -1192,7 +1224,7 @@ function openEdit(id){
   document.getElementById('m-vues').value=d.vues||0;
   document.getElementById('m-heures').value=d.heures||0;
   document.getElementById('m-termines').value=d.termines||0;
-  document.getElementById('m-relus').value=d.relus||0;
+
   document.getElementById('m-platine').checked=d.platine||false;
   document.getElementById('m-desc').value=d.desc||'';
   document.getElementById('m-avis').value=d.avis||'';
@@ -1233,7 +1265,7 @@ function saveEntry(){
     vues:parseInt(document.getElementById('m-vues').value)||0,
     heures:parseInt(document.getElementById('m-heures').value)||0,
     termines:parseInt(document.getElementById('m-termines').value)||0,
-    relus:parseInt(document.getElementById('m-relus').value)||0,
+    relus:0,
     platine:document.getElementById('m-platine').checked,
     jeuMode:document.getElementById('m-jeu-mode').value,
     saisons:hasSaisons(t)?getSaisonsFromForm():[],
@@ -1435,11 +1467,12 @@ function renderStats2(){
   var html = '';
 
   // Key numbers
+  var fini=data.filter(function(d){return d.statut==='Fini';}).length;
   html += '<div class="stats-grid">';
-  html += '<div class="stat-card"><div class="sc-icon">📚</div><div class="sc-val">'+total+'</div><div class="sc-lbl">Œuvres totales</div></div>';
-  html += '<div class="stat-card"><div class="sc-icon">⭐</div><div class="sc-val">'+avgNote+'<span style="font-size:14px">/20</span></div><div class="sc-lbl">Note moyenne</div></div>';
-  html += '<div class="stat-card"><div class="sc-icon">⏱️</div><div class="sc-val">'+totalHours+'<span style="font-size:14px">h</span></div><div class="sc-lbl">Temps estimé</div></div>';
-  html += '<div class="stat-card"><div class="sc-icon">📖</div><div class="sc-val">'+chapTotal+'</div><div class="sc-lbl">Chapitres lus</div></div>';
+  html += '<div class="stat-card"><div class="sc-icon">📚</div><div class="sc-val">'+total+'</div><div class="sc-lbl">Au total</div></div>';
+  html += '<div class="stat-card"><div class="sc-icon">✅</div><div class="sc-val">'+fini+'</div><div class="sc-lbl">Terminés</div></div>';
+  html += '<div class="stat-card"><div class="sc-icon">⭐</div><div class="sc-val">'+avgNote+'<span style="font-size:13px">/20</span></div><div class="sc-lbl">Note moy.</div></div>';
+  html += '<div class="stat-card"><div class="sc-icon">⏱️</div><div class="sc-val">'+totalHours+'<span style="font-size:13px">h</span></div><div class="sc-lbl">Temps est.</div></div>';
   html += '</div>';
 
   // Statut bar
@@ -1652,14 +1685,14 @@ function shareCard(id){
 
 
 function showTab(tab){
-  ['wish','rank','stats','more'].forEach(function(t){
+  ['encours','rank','stats','more'].forEach(function(t){
     var b=document.getElementById('bnav-'+t);
     if(b) b.classList.remove('active');
   });
   closeMore();
-  if(tab==='wish'){
-    var b=document.getElementById('bnav-wish');if(b)b.classList.add('active');
-    loadWishlist(); renderWishlist(); openPage('pg-wish');
+  if(tab==='encours'){
+    var b=document.getElementById('bnav-encours');if(b)b.classList.add('active');
+    openPage('pg-encours'); renderEnCours();
   } else if(tab==='rank'){
     var b=document.getElementById('bnav-rank');if(b)b.classList.add('active');
     openPage('pg-rank');
@@ -1689,6 +1722,118 @@ function saveSettingsForm(){
   // Visual feedback
   var btn = document.querySelector('.settings-save-btn');
   if(btn){ btn.textContent='✓ Sauvegardé !'; btn.style.background='#27AE60'; setTimeout(function(){ btn.textContent='✓ Enregistrer'; btn.style.background=''; },2000); }
+}
+
+
+
+function ecInp(label, val, fn){
+  return '<div class="ec-inp-group"><label>'+label+'</label><input type="number" min="0" value="'+(val||0)+'" onchange="'+fn+'" inputmode="numeric"></div>';
+}
+function ecInputsReadable(d){
+  return '<div class="ec-inputs">'+
+    ecInp('Lus', d.chap, 'setField('+d.id+',\"chap\",this.value)')+
+    ecInp('Dispo', d.chapoDispo||'', 'setField('+d.id+',\"chapoDispo\",this.value)')+
+  '</div>';
+}
+function ecInputsSaison(d){
+  var si=d.saisons.length-1, ls=d.saisons[si];
+  return '<div class="ec-inputs">'+
+    ecInp('Ep. vus S'+(si+1), ls.done||0, 'setEpDone('+d.id+','+si+',this.value)')+
+    ecInp('Total ep.', ls.eps||0, 'setEpTotal('+d.id+','+si+',this.value)')+
+  '</div>';
+}
+function ecInputsFilm(d){
+  return '<div class="ec-inputs">'+ecInp('Fois vu', d.vues||0, 'setField('+d.id+',\"vues\",this.value)')+'</div>';
+}
+function ecInputsJeu(d){
+  return '<div class="ec-inputs">'+
+    ecInp('Heures', d.heures||0, 'setField('+d.id+',\"heures\",this.value)')+
+    ecInp('Terminé', d.termines||0, 'setField('+d.id+',\"termines\",this.value)')+
+  '</div>';
+}
+function renderEnCours(){
+  var el = document.getElementById('encours-body');
+  if(!el) return;
+  // Apply same type/cat filters as main page
+  var items = data.filter(function(d){
+    if(d.statut!=='En cours'&&d.statut!=='Fini') return false;
+    if(activeTypes.length && !activeTypes.includes(d.type)) return false;
+    if(activeCat && !getDCats(d).includes(activeCat)) return false;
+    return true;
+  });
+  var encours = items.filter(function(d){return d.statut==='En cours';});
+  var finis   = items.filter(function(d){return d.statut==='Fini';});
+  encours.sort(function(a,b){
+    var ra=(a.chapoDispo||a.chap)-a.chap, rb=(b.chapoDispo||b.chap)-b.chap;
+    return rb-ra;
+  });
+  finis.sort(function(a,b){return noteTotal(b)-noteTotal(a);});
+  if(!encours.length && !finis.length){
+    el.innerHTML='<div class="empty">Aucune œuvre.<br>Changez les filtres ou ajoutez un titre !</div>';
+    return;
+  }
+  var html2='';
+  if(encours.length) html2+='<div class="ec-section-title">▶ En cours ('+encours.length+')</div>';
+  encours.forEach(function(d){
+    var ti=getTypeInfo(d.type);
+    var img=getImgSrc(d);
+    var pct=null;
+    var inputsHtml='';
+
+    if(d.type==='Manga'||d.type==='Webtoon'||d.type==='Light Novel'){
+      if(d.chapoDispo) pct=Math.min(100,Math.round((d.chap/d.chapoDispo)*100));
+      inputsHtml=ecInputsReadable(d);
+    } else if(d.type==='Anime'||d.type==='Série'){
+      if(d.saisons&&d.saisons.length){
+        var tot=d.saisons.reduce(function(a,s){return a+(s.eps||0);},0);
+        var done=d.saisons.reduce(function(a,s){return a+(s.done||0);},0);
+        if(tot>0) pct=Math.min(100,Math.round((done/tot)*100));
+        inputsHtml=ecInputsSaison(d);
+      }
+    } else if(d.type==='Film'){
+      inputsHtml=ecInputsFilm(d);
+    } else if(d.type==='Jeu vidéo'){
+      inputsHtml=ecInputsJeu(d);
+    }
+
+    html2+='<div class="ec-card">'+
+      '<div class="ec-top" onclick="openDetail('+d.id+');closePage(\"pg-encours\")">'+
+        (img?'<img class="ec-img" src="'+esc(img)+'" alt="">':'<div class="ec-img ec-img-ph">'+ti.e+'</div>')+
+        '<div class="ec-info">'+
+          '<div class="ec-title">'+esc(d.titre)+'</div>'+
+          '<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:3px">'+
+            '<span class="tp '+ti.cls+'">'+esc(ti.v)+'</span>'+
+            (noteTotal(d)>0?'<span style="font-size:11px;font-weight:700;color:var(--ac)">'+noteTotal(d)+'/20</span>':'')+
+          '</div>'+
+          (pct!==null?'<div style="margin-top:5px"><div class="prog-wrap"><div class="prog" style="width:'+pct+'%"></div></div><div style="font-size:10px;color:var(--t3);margin-top:2px">'+pct+'%</div></div>':'')+
+        '</div>'+
+        '<button class="ec-edit-btn" onclick="event.stopPropagation();openEdit('+d.id+');closePage(\"pg-encours\")">&#9998;</button>'+
+      '</div>'+
+      inputsHtml+
+      (d.url?'<a href="'+esc(d.url)+'" target="_blank" class="ec-read-btn">&#128214; '+( d.type==='Webtoon'||d.type==='Manga'||d.type==='Light Novel'?'Lire':'Regarder')+(d.urlEn?' FR':'')+' &#8594;</a>':'')+
+      (d.urlEn?'<a href="'+esc(d.urlEn)+'" target="_blank" class="ec-read-btn ec-read-en">&#127988; Lire EN &#8594;</a>':'')+
+    '</div>';
+  });
+  if(finis.length){
+    html2+='<div class="ec-section-title" style="margin-top:1rem">✅ Terminés ('+finis.length+')</div>';
+    finis.forEach(function(d){
+      var ti=getTypeInfo(d.type), img=getImgSrc(d), nt=noteTotal(d);
+      html2+='<div class="ec-card">'+
+        '<div class="ec-top" onclick="openDetail('+d.id+');closePage(\"pg-encours\")">'+
+          (img?'<img class="ec-img" src="'+esc(img)+'" alt="">':'<div class="ec-img ec-img-ph">'+ti.e+'</div>')+
+          '<div class="ec-info">'+
+            '<div class="ec-title">'+esc(d.titre)+'</div>'+
+            '<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:3px">'+
+              '<span class="tp '+ti.cls+'">'+esc(ti.v)+'</span>'+
+              (nt>0?'<span style="font-size:12px;font-weight:700;color:var(--ac)">'+nt+'/20 ⭐</span>':'')+
+            '</div>'+
+          '</div>'+
+          '<button class="ec-edit-btn" onclick="event.stopPropagation();openEdit('+d.id+');closePage(\"pg-encours\")">&#9998;</button>'+
+        '</div>'+
+      '</div>';
+    });
+  }
+  el.innerHTML=html2;
 }
 
 </script>
@@ -1807,6 +1952,15 @@ function saveSettingsForm(){
       <button class="btn-ok" onclick="navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('share-text').value).then(function(){var b=event.target;b.textContent='✓ Copié !';setTimeout(function(){b.textContent='Copier';},2000);})">Copier</button>
     </div>
   </div>
+</div>
+
+<!-- EN COURS PAGE -->
+<div id="pg-encours" class="overlay">
+  <div class="pg-hdr">
+    <button class="back-btn" onclick="closePage('pg-encours')">&#8592;</button>
+    <h2>En cours &#9654;</h2>
+  </div>
+  <div class="pg-body" id="encours-body"></div>
 </div>
 </body>
 </html>
