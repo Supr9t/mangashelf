@@ -19,41 +19,16 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
   --bg:#f4f2fb;--sf:#fff;--s2:#eeecf8;--bd:#e0ddf2;--b2:#bbb7e0;
-  --tx:#1a1825;--t2:#6b6585;--t3:#a09abfunction renderCats(){
-  var el=document.getElementById('cat-list');
-  if(!cats.length){el.innerHTML='<div style="font-size:13px;color:var(--t3)">Aucune catégorie.</div>';return;}
-  el.innerHTML=cats.map(function(c,i){
-    return '<div class="cat-row" id="catr-'+i+'">' +
-      '<span class="cat-row-name" id="catn-'+i+'" style="flex:1">'+esc(c)+'</span>' +
-      '<input type="text" id="cati-'+i+'" value="'+esc(c)+'" style="display:none;flex:1;background:var(--s2);border:1px solid var(--ac);border-radius:var(--rx);padding:5px 8px;color:var(--tx);font-size:14px;outline:none">' +
-      '<button onclick="startRenameCat('+i+')" style="background:var(--ab);border:1px solid var(--ac);color:var(--at);cursor:pointer;font-size:13px;padding:3px 8px;border-radius:var(--rx)" id="catebtn-'+i+'">&#9998;</button>' +
-      '<button onclick="saveRenameCat('+i+')" style="display:none;background:var(--ok);border:1px solid #639922;color:var(--ot);cursor:pointer;font-size:13px;padding:3px 8px;border-radius:var(--rx)" id="catsave-'+i+'">&#10003;</button>' +
-      '<button class="cat-del" onclick="delCat(''+i+'')">&#10005;</button>' +
-    '</div>';
-  }).join('');
-}
-function startRenameCat(i){
-  var nm=document.getElementById('catn-'+i), inp=document.getElementById('cati-'+i);
-  var eb=document.getElementById('catebtn-'+i), sb=document.getElementById('catsave-'+i);
-  if(nm) nm.style.display='none';
-  if(inp){inp.style.display='block';inp.focus();}
-  if(eb) eb.style.display='none';
-  if(sb) sb.style.display='inline-block';
-}
-function saveRenameCat(i){
-  var inp=document.getElementById('cati-'+i);
-  var newName=(inp?inp.value:'').trim();
-  if(!newName) return;
-  var oldName=cats[i];
-  if(newName===oldName){renderCats();return;}
-  if(cats.indexOf(newName)>-1){alert('Cette catégorie existe déjà');return;}
-  data.forEach(function(d){
-    if(Array.isArray(d.cats)){var j=d.cats.indexOf(oldName);if(j>-1)d.cats[j]=newName;}
-  });
-  cats[i]=newName;
-  save();renderCats();renderCatTabs();render();
-}
-08A;
+  --tx:#1a1825;--t2:#6b6585;--t3:#a09abc;
+  --ac:#7F77DD;--a2:#534AB7;--ab:#EEEDFE;--at:#3C3489;
+  --nb:#FAEEDA;--nt:#633806;--nd:#EF9F27;
+  --ok:#EAF3DE;--ot:#27500A;
+  --pb:#E6F1FB;--pt:#0C447C;
+  --dn:#E24B4A;--db:#FCEBEB;--dt:#791F1F;
+  --r:14px;--rs:8px;--rx:6px;
+  --sat:env(safe-area-inset-top);--sab:env(safe-area-inset-bottom);
+  /* Type colors */
+  --manga-bg:#FFF0E0;--manga-tx:#7A3800;--manga-bd:#F5C08A;
   --webtoon-bg:#E6F9EE;--webtoon-tx:#0A5C2E;--webtoon-bd:#6FCF97;
   --ln-bg:#F0EDFF;--ln-tx:#3C3489;--ln-bd:#B0A9F0;
   --anime-bg:#F3E6FF;--anime-tx:#5B0E91;--anime-bd:#C080F0;
@@ -414,10 +389,6 @@ select{max-width:100%;text-overflow:ellipsis}
 .ec-read-en{color:var(--ot);background:var(--ok)}
 
 .ec-section-title{font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.6rem;padding:.25rem 0}
-
-.cat-rename-btn{background:var(--ab);border:1px solid var(--ac);color:var(--at);cursor:pointer;font-size:14px;padding:0 7px;border-radius:var(--rx);height:28px;display:inline-flex;align-items:center}
-.cat-save-btn{background:var(--ok);border:1px solid #639922;color:var(--ot);cursor:pointer;font-size:14px;padding:0 7px;border-radius:var(--rx);height:28px;display:none;align-items:center}
-.cat-row{gap:6px}
 </style>
 </head>
 <body>
@@ -746,7 +717,7 @@ function fmtDate(ts){
 function getTypeInfo(v){for(var i=0;i<TYPES.length;i++)if(TYPES[i].v===v)return TYPES[i];return TYPES[0];}
 function getDCats(d){return Array.isArray(d.cats)?d.cats:(d.cat?[d.cat]:[]);}
 function getImgSrc(d){return d.imgUrl||d.imgData||null;}
-function noteTotal(d){if(!d.notes)return 0;var t=CRIT.reduce(function(a,c){return a+(parseFloat(d.notes[c.id])||0);},0);return Math.round(t*100)/100;}
+function noteTotal(d){if(!d.notes)return 0;var t=CRIT.reduce(function(a,c){return a+(parseFloat(d.notes[c.id])||0);},0);return (Math.round(t*100)/100);}
 function isReadable(t){return t==='Manga'||t==='Webtoon'||t==='Light Novel';}
 function isWatchable(t){return t==='Anime'||t==='Série'||t==='Film';}
 function hasSaisons(t){return t==='Anime'||t==='Série';}
@@ -1084,9 +1055,36 @@ function renderHist(){
 function renderCats(){
   var el=document.getElementById('cat-list');
   if(!cats.length){el.innerHTML='<div style="font-size:13px;color:var(--t3)">Aucune catégorie.</div>';return;}
-  el.innerHTML=cats.map(function(c){
-    return '<div class="cat-row"><span>'+esc(c)+'</span><button class="cat-del" onclick="delCat(\''+esc(c)+'\')">&#10005;</button></div>';
+  el.innerHTML=cats.map(function(c,i){
+    return '<div class="cat-row" id="catr-'+i+'">' +
+      '<span id="catn-'+i+'" style="flex:1">'+esc(c)+'</span>' +
+      '<input type="text" id="cati-'+i+'" value="'+esc(c)+'" style="display:none;flex:1;background:var(--s2);border:1px solid var(--ac);border-radius:var(--rx);padding:5px 8px;color:var(--tx);font-size:14px;outline:none">' +
+      '<button id="catebtn-'+i+'" onclick="startRenameCat('+i+')" style="background:var(--ab);border:1px solid var(--ac);color:var(--at);cursor:pointer;font-size:13px;padding:3px 9px;border-radius:var(--rx)">&#9998;</button>' +
+      '<button id="catsave-'+i+'" onclick="saveRenameCat('+i+')" style="display:none;background:var(--ok);border:1px solid #639922;color:var(--ot);cursor:pointer;font-size:13px;padding:3px 9px;border-radius:var(--rx)">&#10003;</button>' +
+      '<button class="cat-del" onclick="delCat('+i+')">&#10005;</button>' +
+    '</div>';
   }).join('');
+}
+function startRenameCat(i){
+  var nm=document.getElementById('catn-'+i), inp=document.getElementById('cati-'+i);
+  var eb=document.getElementById('catebtn-'+i), sb=document.getElementById('catsave-'+i);
+  if(nm) nm.style.display='none';
+  if(inp){inp.style.display='block';inp.focus();}
+  if(eb) eb.style.display='none';
+  if(sb) sb.style.display='inline-block';
+}
+function saveRenameCat(i){
+  var inp=document.getElementById('cati-'+i);
+  var newName=(inp?inp.value:'').trim();
+  if(!newName) return;
+  var oldName=cats[i];
+  if(newName===oldName){renderCats();return;}
+  if(cats.indexOf(newName)>-1){alert('Cette catégorie existe déjà');return;}
+  data.forEach(function(d){
+    if(Array.isArray(d.cats)){var j=d.cats.indexOf(oldName);if(j>-1)d.cats[j]=newName;}
+  });
+  cats[i]=newName;
+  save();renderCats();renderCatTabs();render();
 }
 function addCat(){
   var inp=document.getElementById('new-cat'),v=(inp.value||'').trim();
@@ -1094,10 +1092,11 @@ function addCat(){
   cats.push(v);save();inp.value='';renderCats();renderCatTabs();populateCatsForm([]);
 }
 function delCat(i){
-  var c=cats[typeof i==='number'?i:parseInt(i)];
-  if(!c) return;
+  var c=cats[parseInt(i)];
+  if(!c)return;
   if(!confirm('Supprimer "'+c+'" ?'))return;
-  cats=cats.filter(function(x){return x!==c;});save();renderCats();renderCatTabs();render();
+  cats=cats.filter(function(x){return x!==c;});
+  save();renderCats();renderCatTabs();render();
 }
 
 /* FORM */
@@ -1173,7 +1172,7 @@ function buildCriteria(notes){
 }
 function updateCrit(id,v){var el=document.getElementById('cv-'+id);if(el)el.textContent=v;calcTotal();}
 function calcTotal(){
-  var t=0;CRIT.forEach(function(c){var s=document.getElementById('cs-'+c.id);if(s)t+=parseInt(s.value)||0;});
+  var t=0;CRIT.forEach(function(c){var s=document.getElementById('cs-'+c.id);if(s)t+=parseFloat(s.value)||0;});
   var el=document.getElementById('note-total');if(el)el.textContent=t+' / 20';
 }
 
@@ -1284,7 +1283,7 @@ function saveEntry(){
     if(dup&&!confirm('"'+titre+'" existe déjà en '+t+'. Ajouter quand même ?'))return;
   }
 
-  var notes={};CRIT.forEach(function(c){var s=document.getElementById('cs-'+c.id);notes[c.id]=s?parseInt(s.value)||0:0;});
+  var notes={};CRIT.forEach(function(c){var s=document.getElementById('cs-'+c.id);notes[c.id]=s?parseFloat(s.value)||0:0;});
   var entry={
     id:id,titre:titre,type:t,
     statut:document.getElementById('m-statut').value,
