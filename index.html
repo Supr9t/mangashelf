@@ -1375,6 +1375,7 @@ function saveEntry(){
     if(dup&&!confirm('"'+titre+'" existe déjà en '+t+'. Ajouter quand même ?'))return;
   }
 
+  var existing=data.find(function(x){return x.id===id;});
   var notes={};CRIT.forEach(function(c){var s=document.getElementById('cs-'+c.id);notes[c.id]=s?parseFloat(s.value)||0:0;});
   var newStatut=document.getElementById('m-statut').value;
   var entry={
@@ -1406,7 +1407,6 @@ function saveEntry(){
   // Clear dateFin if un-finishing
   if(newStatut!=='Fini' && existing&&existing.statut==='Fini') entry.dateFin=null;
   var now=Date.now();
-  var existing=data.find(function(x){return x.id===id;});
   entry.timeline = existing&&existing.timeline ? existing.timeline.slice() : [];
   if(!existing){
     var ajoutDate=(function(){var v=document.getElementById('m-date-ajout').value;return v?new Date(v).getTime():now;})();
