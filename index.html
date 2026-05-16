@@ -389,6 +389,18 @@ select{max-width:100%;text-overflow:ellipsis}
 .ec-read-en{color:var(--ot);background:var(--ok)}
 
 .ec-section-title{font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.6rem;padding:.25rem 0}
+
+.tl-item{display:flex;align-items:center;gap:10px;padding:.55rem 0;border-bottom:1px solid var(--bd)}
+.tl-item:last-child{border-bottom:none}
+.tl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.tl-dot.ajout{background:#50C878}
+.tl-dot.modif{background:var(--ac)}
+.tl-dot.note{background:#EF9F27}
+.tl-dot.statut{background:var(--pt)}
+.tl-dot.chap{background:#60A8E0}
+
+input[type=date]{color-scheme:dark;-webkit-appearance:none;appearance:none}
+.dark input[type=date]{color-scheme:dark}
 </style>
 </head>
 <body>
@@ -562,6 +574,29 @@ select{max-width:100%;text-overflow:ellipsis}
 
     <!-- URL -->
     <div class="form-row">
+      <label style="margin-bottom:6px">📅 Dates</label>
+      <div class="f2" style="margin-bottom:8px">
+        <div class="form-row" style="margin:0">
+          <label style="font-size:11px;color:var(--t3);margin-bottom:3px">➕ Date d'ajout</label>
+          <input type="date" id="m-date-ajout">
+        </div>
+        <div class="form-row" style="margin:0">
+          <label style="font-size:11px;color:var(--t3);margin-bottom:3px">📖 Début de lecture</label>
+          <input type="date" id="m-date-debut">
+        </div>
+      </div>
+      <div class="f2">
+        <div class="form-row" style="margin:0">
+          <label style="font-size:11px;color:var(--t3);margin-bottom:3px">✅ Date de fin</label>
+          <input type="date" id="m-date-fin">
+        </div>
+        <div class="form-row" style="margin:0">
+          <label style="font-size:11px;color:var(--t3);margin-bottom:3px">🕐 Dernière activité</label>
+          <input type="date" id="m-date-activity">
+        </div>
+      </div>
+    </div>
+    <div class="form-row">
       <label>URL de lecture / visionnage</label>
       <input type="url" id="m-url" placeholder="https://...">
     </div>
@@ -685,6 +720,15 @@ function load(){
   try{dark=JSON.parse(localStorage.getItem('mgv10d')||'false');}catch(e){}
   if(dark) document.body.classList.add('dark');
   updateTheme();
+  // Migrate: add timeline to existing entries that don't have one
+  var migrated=false;
+  data.forEach(function(d){
+    if(!d.timeline){
+      d.timeline=[{date:Date.now(),type:'ajout',detail:'Ajouté (date exacte inconnue)'}];
+      migrated=true;
+    }
+  });
+  if(migrated) save();
 }
 function save(){
   localStorage.setItem(K,JSON.stringify(data));
@@ -708,6 +752,11 @@ function openPage(id){
 function closePage(id){var p=document.getElementById(id);if(p)p.classList.remove('open');}
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmtDateFull(ts){
+  if(!ts) return '—';
+  var d=new Date(ts);
+  return d.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+}
 function fmtDate(ts){
   var d=new Date(ts),now=new Date(),diff=Math.floor((now-d)/86400000);
   if(diff===0)return"Aujourd'hui "+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
@@ -937,6 +986,20 @@ function openDetail(id){
   dcats.forEach(function(c){b+='<span class="cat-chip" style="position:static">'+esc(c)+'</span>';});
   b+='</div>';
 
+  // Dates block
+  var hasDates = d.dateDebut||d.dateFin||d.dateLastActivity||(d.timeline&&d.timeline.length);
+  if(hasDates){
+    b+='<div class="det-sec"><div class="det-sec-title">Dates</div>';
+    b+='<div class="det-grid">';
+    if(d.timeline&&d.timeline.length){
+      var firstEvt=d.timeline[0];
+      b+='<div class="det-item"><div class="di-l">➕ Ajouté</div><div class="di-v" style="font-size:13px;font-weight:600">'+fmtDateFull(firstEvt.date)+'</div></div>';
+    }
+    if(d.dateDebut) b+='<div class="det-item"><div class="di-l">📅 Début</div><div class="di-v" style="font-size:13px;font-weight:600">'+fmtDateFull(d.dateDebut)+'</div></div>';
+    if(d.dateFin) b+='<div class="det-item"><div class="di-l">✅ Fin</div><div class="di-v" style="font-size:13px;font-weight:600">'+fmtDateFull(d.dateFin)+'</div></div>';
+    if(d.dateLastActivity) b+='<div class="det-item"><div class="di-l">🕐 Dernière activité</div><div class="di-v" style="font-size:13px;font-weight:600">'+fmtDateFull(d.dateLastActivity)+'</div></div>';
+    b+='</div></div>';
+  }
   b+='<div class="det-sec"><div class="det-sec-title">Statistiques</div><div class="det-grid">';
   if(nt>0) b+='<div class="det-item"><div class="di-l">Note globale</div><div class="di-v">'+nt+'/20 ⭐</div></div>';
   if(isReadable(d.type)){
@@ -977,6 +1040,21 @@ function openDetail(id){
   b+='<button class="edit-avis-btn" onclick="openAvisModal('+id+')">&#9998; '+(d.avis?'Modifier':'Rédiger')+' mon avis</button>';
   b+='</div>';
 
+  // Timeline
+  if(d.timeline&&d.timeline.length){
+    b+='<div class="det-sec"><div class="det-sec-title">Historique</div>';
+    b+='<div style="display:flex;flex-direction:column;gap:0">';
+    var tl=d.timeline.slice().reverse();
+    tl.forEach(function(t){
+      var icon={'ajout':'➕','note':'⭐','statut':'🔖','chap':'📖','modif':'✏️'}[t.type]||'📝';
+      b+='<div class="tl-item">'+
+        '<div class="tl-dot '+t.type+'"></div>'+
+        '<div style="flex:1"><div style="font-size:13px">'+icon+' '+esc(t.detail)+'</div></div>'+
+        '<div style="font-size:11px;color:var(--t3);white-space:nowrap;flex-shrink:0">'+fmtDate(t.date)+'</div>'+
+      '</div>';
+    });
+    b+='</div></div>';
+  }
   if(d.url||d.urlEn){
     b+='<div class="det-sec"><div class="det-sec-title">Liens</div>';
     if(d.url) b+='<a href="'+esc(d.url)+'" target="_blank" style="display:block;color:var(--ac);font-size:14px;margin-bottom:6px">&#128214; Lire en français</a>';
@@ -1237,6 +1315,9 @@ function openAdd(){
   document.getElementById('m-avis').value='';
   document.getElementById('m-jeu-mode').value='solo';
   document.getElementById('form-title').textContent='Ajouter';
+  ['m-date-ajout','m-date-debut','m-date-fin','m-date-activity'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value='';
+  });
   resetImgUI();switchImgTab('file');buildCriteria(null);populateCatsForm([]);
   document.getElementById('saisons-form').innerHTML='';
   updateFormType();openPage('pg-form');
@@ -1260,6 +1341,17 @@ function openEdit(id){
   document.getElementById('m-avis').value=d.avis||'';
   document.getElementById('m-jeu-mode').value=d.jeuMode||'solo';
   document.getElementById('form-title').textContent='Modifier';
+  // Date fields
+  function tsToInput(ts){ return ts?new Date(ts).toISOString().slice(0,10):''; }
+  var da=document.getElementById('m-date-ajout');
+  var dd=document.getElementById('m-date-debut');
+  var df=document.getElementById('m-date-fin');
+  var dac=document.getElementById('m-date-activity');
+  var firstDate=d.timeline&&d.timeline.length?d.timeline[0].date:null;
+  if(da) da.value=tsToInput(firstDate);
+  if(dd) dd.value=tsToInput(d.dateDebut);
+  if(df) df.value=tsToInput(d.dateFin);
+  if(dac) dac.value=tsToInput(d.dateLastActivity);
   resetImgUI();
   if(d.imgUrl){editImg={type:'url',val:d.imgUrl};switchImgTab('url');document.getElementById('m-img-url').value=d.imgUrl;previewImgUrl(d.imgUrl);}
   else if(d.imgData){editImg={type:'data',val:d.imgData};switchImgTab('file');var p=document.getElementById('img-preview'),ph=document.getElementById('img-ph'),chg=document.getElementById('img-chg');if(p){p.src=d.imgData;p.style.display='block';}if(ph)ph.style.display='none';if(chg)chg.style.display='block';}
@@ -1284,9 +1376,10 @@ function saveEntry(){
   }
 
   var notes={};CRIT.forEach(function(c){var s=document.getElementById('cs-'+c.id);notes[c.id]=s?parseFloat(s.value)||0:0;});
+  var newStatut=document.getElementById('m-statut').value;
   var entry={
     id:id,titre:titre,type:t,
-    statut:document.getElementById('m-statut').value,
+    statut:newStatut,
     cats:getSelectedCats(),
     url:document.getElementById('m-url').value.trim(),
     urlEn:document.getElementById('m-url-en').value.trim(),
@@ -1303,11 +1396,45 @@ function saveEntry(){
     avis:document.getElementById('m-avis').value.trim(),
     notes:notes,
     imgData:editImg&&editImg.type==='data'?editImg.val:null,
-    imgUrl:editImg&&editImg.type==='url'?editImg.val:null
+    imgUrl:editImg&&editImg.type==='url'?editImg.val:null,
+    dateDebut: (function(){var v=document.getElementById('m-date-debut').value;return v?new Date(v).getTime():(existing?(existing.dateDebut||null):null);})(),
+    dateFin:   (function(){var v=document.getElementById('m-date-fin').value;return v?new Date(v).getTime():(existing?(existing.dateFin||null):null);})(),
+    dateLastActivity: (function(){var v=document.getElementById('m-date-activity').value;return v?new Date(v).getTime():(existing?(existing.dateLastActivity||null):null);})()
   };
+  // Auto-set dateFin when status becomes Fini
+  if(newStatut==='Fini' && (!existing||existing.statut!=='Fini')) entry.dateFin=Date.now();
+  // Clear dateFin if un-finishing
+  if(newStatut!=='Fini' && existing&&existing.statut==='Fini') entry.dateFin=null;
+  var now=Date.now();
+  var existing=data.find(function(x){return x.id===id;});
+  entry.timeline = existing&&existing.timeline ? existing.timeline.slice() : [];
+  if(!existing){
+    var ajoutDate=(function(){var v=document.getElementById('m-date-ajout').value;return v?new Date(v).getTime():now;})();
+    entry.timeline.push({date:ajoutDate, type:'ajout', detail:'Ajouté'});
+  } else {
+    // Allow manual override of ajout date
+    var ajoutInput=document.getElementById('m-date-ajout');
+    if(ajoutInput&&ajoutInput.value&&entry.timeline.length>0){
+      var manualAjout=new Date(ajoutInput.value).getTime();
+      if(manualAjout!==entry.timeline[0].date){
+        entry.timeline[0].date=manualAjout;
+        entry.timeline[0].detail='Ajouté (date modifiée)';
+      }
+    }
+    // Detect changes
+    var changes=[];
+    var oldNt=noteTotal(existing), newNt=noteTotal({notes:notes});
+    if(oldNt!==newNt) changes.push('Note : '+oldNt+'/20 → '+newNt+'/20');
+    if(existing.statut!==entry.statut) changes.push('Statut : '+existing.statut+' → '+entry.statut);
+    if(existing.chap!==entry.chap) changes.push('Chapitres : '+existing.chap+' → '+entry.chap);
+    if(existing.heures!==entry.heures) changes.push('Heures : '+existing.heures+'h → '+entry.heures+'h');
+    if(existing.termines!==entry.termines) changes.push('Terminé : '+existing.termines+'x → '+entry.termines+'x');
+    if(existing.vues!==entry.vues) changes.push('Vu : '+existing.vues+'x → '+entry.vues+'x');
+    if(existing.titre!==entry.titre) changes.push('Titre renommé');
+    if(changes.length) entry.timeline.push({date:now, type:'modif', detail:changes.join(' · ')});
+  }
   var idx=data.findIndex(function(x){return x.id===id;});
   if(idx>-1)data[idx]=entry;else data.unshift(entry);
-  // Remove from wishlist if started from there
   if(pendingWishId){
     wishlist=wishlist.filter(function(x){return x.id!==pendingWishId;});
     saveWishlist();
@@ -1327,7 +1454,17 @@ function setEpDone(id,si,v){upd(id,function(d){if(d.saisons&&d.saisons[si])d.sai
 function setEpTotal(id,si,v){upd(id,function(d){if(d.saisons&&d.saisons[si])d.saisons[si].eps=Math.max(0,parseInt(v)||0);});}
 function del(id){if(!confirm('Supprimer ?'))return;data=data.filter(function(d){return d.id!==id;});save();render();}
 function openUrl(id){var d=data.find(function(x){return x.id===id;});if(d&&d.url)window.open(d.url,'_blank');}
-function upd(id,fn){var d=data.find(function(x){return x.id===id;});if(d){fn(d);save();render();}}
+function upd(id,fn,logDetail){
+  var d=data.find(function(x){return x.id===id;});
+  if(d){
+    fn(d);
+    if(logDetail){
+      if(!d.timeline) d.timeline=[];
+      d.timeline.push({date:Date.now(),type:'modif',detail:logDetail});
+    }
+    save();render();
+  }
+}
 function markDone(id){
   var d=data.find(function(x){return x.id===id;});if(!d)return;
   var detail='';
