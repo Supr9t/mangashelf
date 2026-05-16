@@ -573,29 +573,32 @@ input[type=date]{color-scheme:dark;-webkit-appearance:none;appearance:none}
     </div>
 
     <!-- URL -->
-    <div class="form-row">
-      <label style="margin-bottom:6px">📅 Dates</label>
-      <div class="f2" style="margin-bottom:8px">
-        <div class="form-row" style="margin:0">
-          <label style="font-size:11px;color:var(--t3);margin-bottom:3px">➕ Date d'ajout</label>
-          <input type="date" id="m-date-ajout">
-        </div>
-        <div class="form-row" style="margin:0">
-          <label style="font-size:11px;color:var(--t3);margin-bottom:3px">📖 Début de lecture</label>
-          <input type="date" id="m-date-debut">
-        </div>
-      </div>
-      <div class="f2">
-        <div class="form-row" style="margin:0">
-          <label style="font-size:11px;color:var(--t3);margin-bottom:3px">✅ Date de fin</label>
-          <input type="date" id="m-date-fin">
-        </div>
-        <div class="form-row" style="margin:0">
-          <label style="font-size:11px;color:var(--t3);margin-bottom:3px">🕐 Dernière activité</label>
-          <input type="date" id="m-date-activity">
+    <!-- Dates — affichage selon le type -->
+    <div id="z-dates-read" style="display:none">
+      <div class="form-row">
+        <label>📅 Dates de lecture</label>
+        <div class="f2">
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <span style="font-size:11px;color:var(--t3)">📖 Début</span>
+            <input type="date" id="m-date-debut" style="width:100%;background:var(--sf);border:1px solid var(--bd);border-radius:var(--rs);padding:11px 12px;color:var(--tx);font-size:15px;outline:none;-webkit-appearance:none">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <span style="font-size:11px;color:var(--t3)">✅ Fin</span>
+            <input type="date" id="m-date-fin" style="width:100%;background:var(--sf);border:1px solid var(--bd);border-radius:var(--rs);padding:11px 12px;color:var(--tx);font-size:15px;outline:none;-webkit-appearance:none">
+          </div>
         </div>
       </div>
     </div>
+    <div id="z-dates-watch" style="display:none">
+      <div class="form-row">
+        <label>📅 1er visionnage <span style="font-weight:400;color:var(--t3);font-size:11px">(optionnel)</span></label>
+        <input type="date" id="m-date-watch" style="width:100%;background:var(--sf);border:1px solid var(--bd);border-radius:var(--rs);padding:11px 12px;color:var(--tx);font-size:15px;outline:none;-webkit-appearance:none">
+      </div>
+    </div>
+    <!-- Hidden fields always present for saving -->
+    <input type="hidden" id="m-date-ajout">
+    <input type="hidden" id="m-date-activity">
+    <input type="hidden" id="m-date-fin-hidden">
     <div class="form-row">
       <label>URL de lecture / visionnage</label>
       <input type="url" id="m-url" placeholder="https://...">
@@ -1185,6 +1188,11 @@ function updateFormType(){
   document.getElementById('z-film').style.display=t==='Film'?'block':'none';
   document.getElementById('z-jeu').style.display=isGame(t)?'block':'none';
   document.getElementById('z-url-en').style.display=t==='Webtoon'?'block':'none';
+  // Dates
+  var zr=document.getElementById('z-dates-read');
+  var zw=document.getElementById('z-dates-watch');
+  if(zr) zr.style.display=isReadable(t)?'block':'none';
+  if(zw) zw.style.display=isWatchable(t)?'block':'none';
   if(hasSaisons(t)&&document.querySelectorAll('#saisons-form .sai-form').length===0) addSaisonForm();
 }
 
@@ -1315,8 +1323,8 @@ function openAdd(){
   document.getElementById('m-avis').value='';
   document.getElementById('m-jeu-mode').value='solo';
   document.getElementById('form-title').textContent='Ajouter';
-  ['m-date-ajout','m-date-debut','m-date-fin','m-date-activity'].forEach(function(id){
-    var el=document.getElementById(id); if(el) el.value='';
+  ['m-date-debut','m-date-fin','m-date-watch'].forEach(function(fid){
+    var el=document.getElementById(fid); if(el) el.value='';
   });
   resetImgUI();switchImgTab('file');buildCriteria(null);populateCatsForm([]);
   document.getElementById('saisons-form').innerHTML='';
@@ -1343,15 +1351,12 @@ function openEdit(id){
   document.getElementById('form-title').textContent='Modifier';
   // Date fields
   function tsToInput(ts){ return ts?new Date(ts).toISOString().slice(0,10):''; }
-  var da=document.getElementById('m-date-ajout');
   var dd=document.getElementById('m-date-debut');
   var df=document.getElementById('m-date-fin');
-  var dac=document.getElementById('m-date-activity');
-  var firstDate=d.timeline&&d.timeline.length?d.timeline[0].date:null;
-  if(da) da.value=tsToInput(firstDate);
+  var dw=document.getElementById('m-date-watch');
   if(dd) dd.value=tsToInput(d.dateDebut);
   if(df) df.value=tsToInput(d.dateFin);
-  if(dac) dac.value=tsToInput(d.dateLastActivity);
+  if(dw) dw.value=tsToInput(d.dateDebut);
   resetImgUI();
   if(d.imgUrl){editImg={type:'url',val:d.imgUrl};switchImgTab('url');document.getElementById('m-img-url').value=d.imgUrl;previewImgUrl(d.imgUrl);}
   else if(d.imgData){editImg={type:'data',val:d.imgData};switchImgTab('file');var p=document.getElementById('img-preview'),ph=document.getElementById('img-ph'),chg=document.getElementById('img-chg');if(p){p.src=d.imgData;p.style.display='block';}if(ph)ph.style.display='none';if(chg)chg.style.display='block';}
@@ -1398,9 +1403,19 @@ function saveEntry(){
     notes:notes,
     imgData:editImg&&editImg.type==='data'?editImg.val:null,
     imgUrl:editImg&&editImg.type==='url'?editImg.val:null,
-    dateDebut: (function(){var v=document.getElementById('m-date-debut').value;return v?new Date(v).getTime():(existing?(existing.dateDebut||null):null);})(),
-    dateFin:   (function(){var v=document.getElementById('m-date-fin').value;return v?new Date(v).getTime():(existing?(existing.dateFin||null):null);})(),
-    dateLastActivity: (function(){var v=document.getElementById('m-date-activity').value;return v?new Date(v).getTime():(existing?(existing.dateLastActivity||null):null);})()
+    dateDebut: (function(){
+      var t2=document.getElementById('m-type').value;
+      var v=isReadable(t2)?document.getElementById('m-date-debut').value:
+            isWatchable(t2)?(document.getElementById('m-date-watch')||{}).value:'';
+      return v?new Date(v).getTime():(existing?(existing.dateDebut||null):null);
+    })(),
+    dateFin: (function(){
+      var t2=document.getElementById('m-type').value;
+      var el=document.getElementById('m-date-fin');
+      var v=isReadable(t2)&&el?el.value:'';
+      return v?new Date(v).getTime():(existing?(existing.dateFin||null):null);
+    })(),
+    dateLastActivity: existing?(existing.dateLastActivity||null):null
   };
   // Auto-set dateFin when status becomes Fini
   if(newStatut==='Fini' && (!existing||existing.statut!=='Fini')) entry.dateFin=Date.now();
@@ -1409,18 +1424,9 @@ function saveEntry(){
   var now=Date.now();
   entry.timeline = existing&&existing.timeline ? existing.timeline.slice() : [];
   if(!existing){
-    var ajoutDate=(function(){var v=document.getElementById('m-date-ajout').value;return v?new Date(v).getTime():now;})();
-    entry.timeline.push({date:ajoutDate, type:'ajout', detail:'Ajouté'});
+    entry.timeline.push({date:now, type:'ajout', detail:'Ajouté'});
   } else {
-    // Allow manual override of ajout date
-    var ajoutInput=document.getElementById('m-date-ajout');
-    if(ajoutInput&&ajoutInput.value&&entry.timeline.length>0){
-      var manualAjout=new Date(ajoutInput.value).getTime();
-      if(manualAjout!==entry.timeline[0].date){
-        entry.timeline[0].date=manualAjout;
-        entry.timeline[0].detail='Ajouté (date modifiée)';
-      }
-    }
+    // dates managed in entry object directly
     // Detect changes
     var changes=[];
     var oldNt=noteTotal(existing), newNt=noteTotal({notes:notes});
