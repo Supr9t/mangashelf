@@ -25,6 +25,7 @@
   --ok:#EAF3DE;--ot:#27500A;
   --pb:#E6F1FB;--pt:#0C447C;
   --dn:#E24B4A;--db:#FCEBEB;--dt:#791F1F;
+  --hb:#EDE7F6;--ht:#4527A0;
   --r:14px;--rs:8px;--rx:6px;
   --sat:env(safe-area-inset-top);--sab:env(safe-area-inset-bottom);
   /* Type colors */
@@ -44,6 +45,7 @@
   --ok:#173404;--ot:#C0DD97;
   --pb:#042C53;--pt:#B5D4F4;
   --dn:#E24B4A;--db:#501313;--dt:#F7C1C1;
+  --hb:#2A1A3D;--ht:#B39DDB;
   --manga-bg:#3D1800;--manga-tx:#F5C08A;--manga-bd:#7A3800;
   --webtoon-bg:#0A2E18;--webtoon-tx:#6FCF97;--webtoon-bd:#0A5C2E;
   --ln-bg:#1A1640;--ln-tx:#B0A9F0;--ln-bd:#3C3489;
@@ -147,7 +149,7 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
 .tp-jeu{background:var(--jeu-bg);color:var(--jeu-tx)}
 .note-line{font-size:12px;font-weight:600;color:var(--ac)}
 .sbadge{display:inline-flex;font-size:10px;padding:2px 9px;border-radius:99px;font-weight:600;width:fit-content}
-.se{background:var(--pb);color:var(--pt)}.sf2{background:var(--ok);color:var(--ot)}.sp{background:var(--nb);color:var(--nt)}.sa{background:var(--db);color:var(--dt)}
+.se{background:var(--pb);color:var(--pt)}.sf2{background:var(--ok);color:var(--ot)}.sp{background:var(--nb);color:var(--nt)}.sh{background:var(--hb);color:var(--ht)}.sa{background:var(--db);color:var(--dt)}
 .prog-wrap{height:3px;background:var(--s2);border-radius:2px;overflow:hidden}
 .prog{height:3px;background:var(--ac);border-radius:2px;transition:width .3s}
 .prog.done{background:#639922}
@@ -448,7 +450,7 @@ select{max-width:100%;text-overflow:ellipsis}
     <input type="text" id="search" placeholder="Rechercher..." oninput="render()">
     <select id="fStatus" onchange="render()">
       <option value="">Tous statuts</option>
-      <option>En cours</option><option>Fini</option><option>Pause</option><option>Abandon</option>
+      <option>En cours</option><option>Fini</option><option>Pause</option><option>Hiatus</option><option>Abandon</option>
     </select>
     <select id="fSort" onchange="render()">
       <option value="date">Récent</option>
@@ -516,7 +518,7 @@ select{max-width:100%;text-overflow:ellipsis}
         </select>
       </div>
       <div class="form-row"><label>Statut</label>
-        <select id="m-statut"><option>En cours</option><option>Fini</option><option>Pause</option><option>Abandon</option></select>
+        <select id="m-statut"><option>En cours</option><option>Fini</option><option>Pause</option><option>Hiatus</option><option>Abandon</option></select>
       </div>
     </div>
 
@@ -574,6 +576,10 @@ select{max-width:100%;text-overflow:ellipsis}
     <div class="form-row">
       <label>URL de lecture / visionnage</label>
       <input type="url" id="m-url" placeholder="https://...">
+    </div>
+    <div class="form-row" id="z-relus-field">
+      <label>🔁 Nombre de relectures complètes <span style="font-weight:400;color:var(--t3);font-size:11px">(en plus de la 1ère lecture)</span></label>
+      <input type="number" id="m-relus" min="0" value="0" inputmode="numeric">
     </div>
     <div id="z-url-en" style="display:none">
       <div class="form-row">
@@ -732,7 +738,7 @@ function isWatchable(t){return t==='Anime'||t==='Série'||t==='Film';}
 function hasSaisons(t){return t==='Anime'||t==='Série';}
 function isGame(t){return t==='Jeu vidéo';}
 function hasNew(d){return d.chapoDispo&&d.chapoDispo>d.chap;}
-function stClass(s){return{' En cours':'se','Fini':'sf2','Pause':'sp','Abandon':'sa'}[s]||'se';}
+function stClass(s){return{'En cours':'se','Fini':'sf2','Pause':'sp','Hiatus':'sh','Abandon':'sa'}[s]||'se';}
 
 function render(){renderStats();renderNotif();renderTypeFilter();renderCatTabs();renderGrid();}
 
@@ -756,7 +762,7 @@ function renderStats(){
       return a;
     },0);
   } else {
-    stat4lbl='📖 Chap. lus'; stat4val=filtered.filter(function(d){return isReadable(d.type);}).reduce(function(a,d){return a+d.chap;},0);
+    stat4lbl='📖 Chap. lus'; stat4val=filtered.filter(function(d){return isReadable(d.type);}).reduce(function(a,d){return a+chapTotalAvecRelus(d);},0);
   }
   document.getElementById('stats').innerHTML=
     '<div class="stat"><div class="stat-l">Total</div><div class="stat-v a">'+total+'</div></div>'+
@@ -876,7 +882,10 @@ function cardHTML(d){
 
   // Progress label
   var progLbl='';
-  if(isReadable(d.type)) progLbl='Lu : '+d.chap+(d.chapoDispo?' / '+d.chapoDispo:'')+' chap';
+  if(isReadable(d.type)){
+    progLbl='Lu : '+d.chap+(d.chapoDispo?' / '+d.chapoDispo:'')+' chap';
+    if(d.relus>0) progLbl+=' · 🔁'+d.relus+'x ('+chapTotalAvecRelus(d)+' total)';
+  }
   else if(hasSaisons(d.type)&&d.saisons&&d.saisons.length){
     var tot2=d.saisons.reduce(function(a,s){return a+(s.eps||0);},0);
     var done2=d.saisons.reduce(function(a,s){return a+(s.done||0);},0);
@@ -950,7 +959,11 @@ function openDetail(id){
   b+='<div class="det-sec"><div class="det-sec-title">Statistiques</div><div class="det-grid">';
   if(nt>0) b+='<div class="det-item"><div class="di-l">Note globale</div><div class="di-v">'+nt+'/20 ⭐</div></div>';
   if(isReadable(d.type)){
-    b+='<div class="det-item"><div class="di-l">Chapitres lus</div><div class="di-v">'+d.chap+(d.chapoDispo?' / '+d.chapoDispo:'')+'</div></div>';
+    b+='<div class="det-item"><div class="di-l">📖 Chap. lus</div><div class="di-v">'+d.chap+(d.chapoDispo?' / '+d.chapoDispo:'')+'</div></div>';
+    if(d.relus>0){
+      b+='<div class="det-item"><div class="di-l">🔁 Relectures</div><div class="di-v">'+d.relus+'x</div></div>';
+      b+='<div class="det-item"><div class="di-l">📚 Total lu</div><div class="di-v" style="color:var(--ot)">'+chapTotalAvecRelus(d)+' chap</div></div>';
+    }
   }
   if(d.type==='Film') b+='<div class="det-item"><div class="di-l">Fois vu</div><div class="di-v">'+(d.vues||0)+'</div></div>';
   if(isGame(d.type)){
@@ -1244,7 +1257,7 @@ function saveEntry(){
     vues:parseInt(document.getElementById('m-vues').value)||0,
     heures:parseInt(document.getElementById('m-heures').value)||0,
     termines:parseInt(document.getElementById('m-termines').value)||0,
-    relus:0,
+    relus:parseInt(document.getElementById('m-relus')?document.getElementById('m-relus').value:0)||0,
     platine:document.getElementById('m-platine').checked,
     jeuMode:document.getElementById('m-jeu-mode').value,
     saisons:hasSaisons(t)?getSaisonsFromForm():[],
@@ -1383,7 +1396,7 @@ function startWish(id){
   document.getElementById('m-vues').value = '0';
   document.getElementById('m-heures').value = '0';
   document.getElementById('m-termines').value = '0';
-  document.getElementById('m-relus').value = '0';
+  var relusEl=document.getElementById('m-relus'); if(relusEl) relusEl.value=d.relus||0;
   document.getElementById('m-platine').checked = false;
   document.getElementById('m-desc').value = '';
   document.getElementById('m-jeu-mode').value = 'solo';
@@ -1433,7 +1446,7 @@ function renderStats2(){
   var avgNote = noted.length ? (noted.reduce(function(a,d){ return a+noteTotal(d); },0)/noted.length).toFixed(1) : '—';
 
   // Reading time estimate
-  var chapTotal = data.filter(function(d){ return d.type==='Manga'||d.type==='Webtoon'||d.type==='Light Novel'; }).reduce(function(a,d){ return a+d.chap; },0);
+  var chapTotal = data.filter(function(d){ return d.type==='Manga'||d.type==='Webtoon'||d.type==='Light Novel'; }).reduce(function(a,d){ return a+chapTotalAvecRelus(d); },0);
   var epTotal = data.filter(function(d){ return d.type==='Anime'||d.type==='Série'; }).reduce(function(a,d){
     if(d.saisons) return a+d.saisons.reduce(function(b,s){ return b+(s.done||0); },0);
     return a;
@@ -1445,7 +1458,7 @@ function renderStats2(){
   var totalHours = Math.round(minsReading/60 + jeuTotal);
 
   // Statut breakdown
-  var statutCounts = {'En cours':0,'Fini':0,'Pause':0,'Abandon':0};
+  var statutCounts = {'En cours':0,'Fini':0,'Pause':0,'Hiatus':0,'Abandon':0};
   data.forEach(function(d){ if(statutCounts[d.statut]!==undefined) statutCounts[d.statut]++; });
 
   var html = '';
@@ -1462,7 +1475,7 @@ function renderStats2(){
   // Statut bar
   html += '<div class="stats-section"><div class="stats-sec-title">Statuts</div>';
   html += '<div class="statut-bars">';
-  var stColors = {'En cours':'var(--pt)','Fini':'var(--ot)','Pause':'var(--nt)','Abandon':'var(--dn)'};
+  var stColors = {'En cours':'var(--pt)','Fini':'var(--ot)','Pause':'var(--nt)','Hiatus':'var(--ht)','Abandon':'var(--dn)'};
   var stBgs = {'En cours':'var(--pb)','Fini':'var(--ok)','Pause':'var(--nb)','Abandon':'var(--db)'};
   Object.keys(statutCounts).forEach(function(s){
     var pct = total ? Math.round(statutCounts[s]/total*100) : 0;
@@ -1741,12 +1754,13 @@ function renderEnCours(){
   if(!el) return;
   // Apply same type/cat filters as main page
   var items = data.filter(function(d){
-    if(d.statut!=='En cours'&&d.statut!=='Fini') return false;
+    if(d.statut!=='En cours'&&d.statut!=='Fini'&&d.statut!=='Pause'&&d.statut!=='Hiatus') return false;
     if(activeTypes.length && !activeTypes.includes(d.type)) return false;
     if(activeCat && !getDCats(d).includes(activeCat)) return false;
     return true;
   });
   var encours = items.filter(function(d){return d.statut==='En cours';});
+  var enpauses = items.filter(function(d){return d.statut==='Pause'||d.statut==='Hiatus';});
   var finis   = items.filter(function(d){return d.statut==='Fini';});
   encours.sort(function(a,b){
     if(a.favori&&!b.favori) return -1;
@@ -1802,6 +1816,28 @@ function renderEnCours(){
       (d.urlEn?'<a href="'+esc(d.urlEn)+'" target="_blank" class="ec-read-btn ec-read-en">&#127988; Lire EN &#8594;</a>':'')+
     '</div>';
   });
+  if(enpauses.length){
+    html2+='<div class="ec-section-title" style="margin-top:1rem">⏸ En attente ('+enpauses.length+')</div>';
+    enpauses.forEach(function(d){
+      var ti=getTypeInfo(d.type), img=getImgSrc(d), nt=noteTotal(d);
+      var sc=stClass(d.statut);
+      html2+='<div class="ec-card">'+
+        '<div class="ec-top" onclick="openDetail('+d.id+');closePage(\"pg-encours\")">'+
+          (img?'<img class="ec-img" src="'+esc(img)+'" alt="">':'<div class="ec-img ec-img-ph">'+ti.e+'</div>')+
+          '<div class="ec-info">'+
+            '<div class="ec-title">'+esc(d.titre)+'</div>'+
+            '<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:3px">'+
+              '<span class="tp '+ti.cls+'">'+esc(ti.v)+'</span>'+
+              '<span class="sbadge '+sc+'">'+esc(d.statut)+'</span>'+
+              (nt>0?'<span style="font-size:11px;font-weight:700;color:var(--ac)">'+nt+'/20</span>':'')+
+            '</div>'+
+            '<div style="font-size:11px;color:var(--t3);margin-top:4px">'+d.chap+(d.chapoDispo?'/'+d.chapoDispo:'')+(d.chapoDispo?' chap':' chap lus')+'</div>'+
+          '</div>'+
+          '<button class="ec-edit-btn" onclick="event.stopPropagation();openEdit('+d.id+');closePage(\"pg-encours\")">&#9998;</button>'+
+        '</div>'+
+      '</div>';
+    });
+  }
   if(finis.length){
     html2+='<div class="ec-section-title" style="margin-top:1rem">✅ Terminés ('+finis.length+')</div>';
     finis.forEach(function(d){
@@ -2001,6 +2037,13 @@ function checkAutoFini(d){
   if(!d.timeline) d.timeline = [];
   d.timeline.push({date:Date.now(), type:'statut', detail:'Fini — '+d.chap+'/'+d.chapoDispo+' chap (x'+d.foisFini+')'});
   return true;
+}
+
+
+function chapTotalAvecRelus(d){
+  var base = d.chap || 0;
+  var relus = d.relus || 0;
+  return base * (1 + relus);
 }
 
 </script>
